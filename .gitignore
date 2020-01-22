@@ -114,3 +114,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# test for mounted efs files
+efs/
+
+# venv
+bin/
+include/
+pyvenv.cfg
