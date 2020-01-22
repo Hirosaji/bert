@@ -21,6 +21,7 @@ from __future__ import print_function
 import collections
 import re
 import unicodedata
+import sentencepiece as sp
 import six
 import tensorflow as tf
 
@@ -133,20 +134,23 @@ def load_vocab(vocab_file):
   return vocab
 
 
-def convert_by_vocab(vocab, items):
-  """Converts a sequence of [tokens|ids] using the vocab."""
-  output = []
-  for item in items:
-    output.append(vocab[item])
-  return output
+def convert_by_vocab(vocab, items, unk_info):
+    """Converts a sequence of [tokens|ids] using the vocab."""
+    output = []
+    for item in items:
+        if item in vocab:
+            output.append(vocab[item])
+        else:
+            output.append(unk_info)
+    return output
 
 
 def convert_tokens_to_ids(vocab, tokens):
-  return convert_by_vocab(vocab, tokens)
+  return convert_by_vocab(vocab, tokens, unk_info=0)
 
 
 def convert_ids_to_tokens(inv_vocab, ids):
-  return convert_by_vocab(inv_vocab, ids)
+  return convert_by_vocab(inv_vocab, ids, unk_info="<unk>")
 
 
 def whitespace_tokenize(text):
@@ -161,25 +165,51 @@ def whitespace_tokenize(text):
 class FullTokenizer(object):
   """Runs end-to-end tokenziation."""
 
-  def __init__(self, vocab_file, do_lower_case=True):
+  def __init__(self, vocab_file, model_file, do_lower_case=True):
+    self.tokenizer = SentencePieceTokenizer(model_file, do_lower_case=do_lower_case)
     self.vocab = load_vocab(vocab_file)
     self.inv_vocab = {v: k for k, v in self.vocab.items()}
-    self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case)
-    self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
+    # self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case)
+    # self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
 
   def tokenize(self, text):
-    split_tokens = []
-    for token in self.basic_tokenizer.tokenize(text):
-      for sub_token in self.wordpiece_tokenizer.tokenize(token):
-        split_tokens.append(sub_token)
+    split_tokens = self.tokenizer.tokenize(text)
+    return split_tokens
+
+    # split_tokens = []
+    # for token in self.basic_tokenizer.tokenize(text):
+    #   for sub_token in self.wordpiece_tokenizer.tokenize(token):
+    #     split_tokens.append(sub_token)
 
     return split_tokens
 
   def convert_tokens_to_ids(self, tokens):
-    return convert_by_vocab(self.vocab, tokens)
+    return convert_by_vocab(self.vocab, tokens, unk_info=0)
 
   def convert_ids_to_tokens(self, ids):
-    return convert_by_vocab(self.inv_vocab, ids)
+    return convert_by_vocab(self.inv_vocab, ids, unk_info="<unk>")
+
+
+class SentencePieceTokenizer(object):
+    """Runs SentencePiece tokenization (from raw text to tokens list)"""
+
+    def __init__(self, model_file=None, do_lower_case=True):
+        """Constructs a SentencePieceTokenizer."""
+        self.tokenizer = sp.SentencePieceProcessor()
+        if self.tokenizer.Load(model_file):
+            print("Loaded a trained SentencePiece model.")
+        else:
+            print("You have to give a path of trained SentencePiece model.")
+            sys.exit(1)
+        self.do_lower_case = do_lower_case
+
+    def tokenize(self, text):
+        """Tokenizes a piece of text."""
+        text = convert_to_unicode(text)
+        if self.do_lower_case:
+            text = text.lower()
+        output_tokens = self.tokenizer.EncodeAsPieces(text)
+        return output_tokens
 
 
 class BasicTokenizer(object):
