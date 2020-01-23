@@ -1,0 +1,15 @@
+BERT_PRAMS = {
+    'vocab_file': './efs/sentencepiece/sp_test.vocab',
+    'model_file': './efs/sentencepiece/sp_test.model',
+    'bert_config_file': './efs/config.json',
+    'init_checkpoint': './efs/model1M/model.ckpt-1000000',
+    'do_lower_case': False,
+    'layers': "-2",
+    # 'layers': "-1,-2,-3,-4",
+    'max_seq_length': 128,
+    'batch_size': 32,
+    'use_tpu': False,
+    'master': None,
+    'num_tpu_cores': 8,
+    'use_one_hot_embeddings': False,
+}
