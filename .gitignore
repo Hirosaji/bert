@@ -122,3 +122,5 @@ efs/
 bin/
 include/
 pyvenv.cfg
+server/apigw/settings.py
+server/output_/eval.tf_record
