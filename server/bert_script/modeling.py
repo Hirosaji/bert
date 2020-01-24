@@ -159,8 +159,8 @@ class BertModel(object):
       config.attention_probs_dropout_prob = 0.0
 
     input_shape = get_shape_list(input_ids, expected_rank=2)
-    batch_size = input_shape[0] / 8
-    seq_length = input_shape[1] / 8
+    batch_size = input_shape[0] / 4
+    seq_length = input_shape[1] / 4
 
     if input_mask is None:
       input_mask = tf.ones(shape=[batch_size, seq_length], dtype=tf.int32)
@@ -642,9 +642,9 @@ def attention_layer(from_tensor,
         "The rank of `from_tensor` must match the rank of `to_tensor`.")
 
   if len(from_shape) == 3:
-    batch_size = from_shape[0] / 8
-    from_seq_length = from_shape[1] / 8
-    to_seq_length = to_shape[1] / 8
+    batch_size = from_shape[0] / 4
+    from_seq_length = from_shape[1] / 4
+    to_seq_length = to_shape[1] / 4
   elif len(from_shape) == 2:
     if (batch_size is None or from_seq_length is None or to_seq_length is None):
       raise ValueError(
