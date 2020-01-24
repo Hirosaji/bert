@@ -90,7 +90,7 @@ class BertConfig(object):
   @classmethod
   def from_json_file(cls, json_file):
     """Constructs a `BertConfig` from a json file of parameters."""
-    with tf.gfile.GFile(json_file, "r") as reader:
+    with tf.io.gfile.GFile(json_file, "r") as reader:
       text = reader.read()
     return cls.from_dict(json.loads(text))
 
@@ -121,7 +121,7 @@ class BertModel(object):
   model = modeling.BertModel(config=config, is_training=True,
     input_ids=input_ids, input_mask=input_mask, token_type_ids=token_type_ids)
 
-  label_embeddings = tf.get_variable(...)
+  label_embeddings = tf.compat.v1.get_variable(...)
   pooled_output = model.get_pooled_output()
   logits = tf.matmul(pooled_output, label_embeddings)
   ...
@@ -159,8 +159,8 @@ class BertModel(object):
       config.attention_probs_dropout_prob = 0.0
 
     input_shape = get_shape_list(input_ids, expected_rank=2)
-    batch_size = input_shape[0]
-    seq_length = input_shape[1]
+    batch_size = input_shape[0] / 8
+    seq_length = input_shape[1] / 8
 
     if input_mask is None:
       input_mask = tf.ones(shape=[batch_size, seq_length], dtype=tf.int32)
@@ -168,8 +168,8 @@ class BertModel(object):
     if token_type_ids is None:
       token_type_ids = tf.zeros(shape=[batch_size, seq_length], dtype=tf.int32)
 
-    with tf.variable_scope(scope, default_name="bert"):
-      with tf.variable_scope("embeddings"):
+    with tf.compat.v1.variable_scope(scope, default_name="bert"):
+      with tf.compat.v1.variable_scope("embeddings"):
         # Perform embedding lookup on the word ids.
         (self.embedding_output, self.embedding_table) = embedding_lookup(
             input_ids=input_ids,
@@ -193,7 +193,7 @@ class BertModel(object):
             max_position_embeddings=config.max_position_embeddings,
             dropout_prob=config.hidden_dropout_prob)
 
-      with tf.variable_scope("encoder"):
+      with tf.compat.v1.variable_scope("encoder"):
         # This converts a 2D mask of shape [batch_size, seq_length] to a 3D
         # mask of shape [batch_size, seq_length, seq_length] which is used
         # for the attention scores.
@@ -221,7 +221,7 @@ class BertModel(object):
       # [batch_size, hidden_size]. This is necessary for segment-level
       # (or segment-pair-level) classification tasks where we need a fixed
       # dimensional representation of the segment.
-      with tf.variable_scope("pooler"):
+      with tf.compat.v1.variable_scope("pooler"):
         # We "pool" the model by simply taking the hidden state corresponding
         # to the first token. We assume that this has been pre-trained
         first_token_tensor = tf.squeeze(self.sequence_output[:, 0:1, :], axis=1)
@@ -406,7 +406,7 @@ def embedding_lookup(input_ids,
   if input_ids.shape.ndims == 2:
     input_ids = tf.expand_dims(input_ids, axis=[-1])
 
-  embedding_table = tf.get_variable(
+  embedding_table = tf.compat.v1.get_variable(
       name=word_embedding_name,
       shape=[vocab_size, embedding_size],
       initializer=create_initializer(initializer_range))
@@ -473,7 +473,7 @@ def embedding_postprocessor(input_tensor,
     if token_type_ids is None:
       raise ValueError("`token_type_ids` must be specified if"
                        "`use_token_type` is True.")
-    token_type_table = tf.get_variable(
+    token_type_table = tf.compat.v1.get_variable(
         name=token_type_embedding_name,
         shape=[token_type_vocab_size, width],
         initializer=create_initializer(initializer_range))
@@ -487,9 +487,9 @@ def embedding_postprocessor(input_tensor,
     output += token_type_embeddings
 
   if use_position_embeddings:
-    assert_op = tf.assert_less_equal(seq_length, max_position_embeddings)
+    assert_op = tf.compat.v1.assert_less_equal(seq_length, max_position_embeddings)
     with tf.control_dependencies([assert_op]):
-      full_position_embeddings = tf.get_variable(
+      full_position_embeddings = tf.compat.v1.get_variable(
           name=position_embedding_name,
           shape=[max_position_embeddings, width],
           initializer=create_initializer(initializer_range))
@@ -642,9 +642,9 @@ def attention_layer(from_tensor,
         "The rank of `from_tensor` must match the rank of `to_tensor`.")
 
   if len(from_shape) == 3:
-    batch_size = from_shape[0]
-    from_seq_length = from_shape[1]
-    to_seq_length = to_shape[1]
+    batch_size = from_shape[0] / 8
+    from_seq_length = from_shape[1] / 8
+    to_seq_length = to_shape[1] / 8
   elif len(from_shape) == 2:
     if (batch_size is None or from_seq_length is None or to_seq_length is None):
       raise ValueError(
@@ -824,12 +824,12 @@ def transformer_model(input_tensor,
 
   all_layer_outputs = []
   for layer_idx in range(num_hidden_layers):
-    with tf.variable_scope("layer_%d" % layer_idx):
+    with tf.compat.v1.variable_scope("layer_%d" % layer_idx):
       layer_input = prev_output
 
-      with tf.variable_scope("attention"):
+      with tf.compat.v1.variable_scope("attention"):
         attention_heads = []
-        with tf.variable_scope("self"):
+        with tf.compat.v1.variable_scope("self"):
           attention_head = attention_layer(
               from_tensor=layer_input,
               to_tensor=layer_input,
@@ -854,7 +854,7 @@ def transformer_model(input_tensor,
 
         # Run a linear projection of `hidden_size` then add a residual
         # with `layer_input`.
-        with tf.variable_scope("output"):
+        with tf.compat.v1.variable_scope("output"):
           attention_output = tf.layers.dense(
               attention_output,
               hidden_size,
@@ -863,7 +863,7 @@ def transformer_model(input_tensor,
           attention_output = layer_norm(attention_output + layer_input)
 
       # The activation is only applied to the "intermediate" hidden layer.
-      with tf.variable_scope("intermediate"):
+      with tf.compat.v1.variable_scope("intermediate"):
         intermediate_output = tf.layers.dense(
             attention_output,
             intermediate_size,
@@ -871,7 +871,7 @@ def transformer_model(input_tensor,
             kernel_initializer=create_initializer(initializer_range))
 
       # Down-project back to `hidden_size` then add the residual.
-      with tf.variable_scope("output"):
+      with tf.compat.v1.variable_scope("output"):
         layer_output = tf.layers.dense(
             intermediate_output,
             hidden_size,
@@ -979,7 +979,7 @@ def assert_rank(tensor, expected_rank, name=None):
 
   actual_rank = tensor.shape.ndims
   if actual_rank not in expected_rank_dict:
-    scope_name = tf.get_variable_scope().name
+    scope_name = tf.compat.v1.get_variable_scope().name
     raise ValueError(
         "For the tensor `%s` in scope `%s`, the actual rank "
         "`%d` (shape = %s) is not equal to the expected rank `%s`" %

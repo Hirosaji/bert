@@ -118,7 +118,7 @@ def model_fn_builder(bert_config, init_checkpoint, layer_indexes, use_tpu,
     if mode != tf.estimator.ModeKeys.PREDICT:
       raise ValueError("Only PREDICT modes are supported: %s" % (mode))
 
-    tvars = tf.trainable_variables()
+    tvars = tf.compat.v1.trainable_variables()
     scaffold_fn = None
     (assignment_map,
      initialized_variable_names) = modeling.get_assignment_map_from_checkpoint(
@@ -126,12 +126,12 @@ def model_fn_builder(bert_config, init_checkpoint, layer_indexes, use_tpu,
     if use_tpu:
 
       def tpu_scaffold():
-        tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+        tf.compat.v1.train.init_from_checkpoint(init_checkpoint, assignment_map)
         return tf.train.Scaffold()
 
       scaffold_fn = tpu_scaffold
     else:
-      tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+      tf.compat.v1.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
     all_layers = model.get_all_encoder_layers()
 

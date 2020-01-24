@@ -17,6 +17,9 @@ from params import BERT_PRAMS
 from extract_features import get_futures
 
 import numpy as np
+import codecs
+import tensorflow as tf
+import json
 
 
 def checkPwd():
@@ -26,11 +29,14 @@ def checkPwd():
 
 
 def cos_simularity(x, y):
-    return np.dot(x,y) / (np.linalg.norm(x) * np.linalg.norm(y))
+    return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 
 def calc_simlarity(total, each):
-    sims = [cos_simularity(e['layers'][0]['values'], total['layers'][0]['values']) for e in each]    
+    sims = [
+        cos_simularity(e["layers"][0]["values"], total["layers"][0]["values"])
+        for e in each
+    ]
     return sims
 
 
@@ -55,8 +61,7 @@ def kijiID2kijiBody(kiji_ID):
     # ]
 
     # run BERT
-    cls_features = kijiBody2similarity(body_ja)['features']
-    simlarities = calc_simlarity(cls_features[0], cls_features[1:])
+    simlarities = kijiBody2similarity(body_ja)
 
     return {
         "body": body_ja,
@@ -67,7 +72,7 @@ def kijiID2kijiBody(kiji_ID):
 
 
 def kijiBody2similarity(kiji_body):
-    input_data = [''.join(kiji_body)] + kiji_body
+    input_data = ["".join(kiji_body)] + kiji_body
     raw_features = get_futures(BERT_PRAMS, input_data)
 
     cls_features = []
@@ -75,7 +80,9 @@ def kijiBody2similarity(kiji_body):
         cls_feature = list(filter(lambda layer: layer["token"] == "[CLS]", raw_feature["features"]))
         cls_features.append(cls_feature[0])
 
-    return {"features": cls_features}
+    simlarities = calc_simlarity(cls_features[1], cls_features[:0] + cls_features[2:])
+
+    return simlarities
 
 
 # EB looks for an 'application' callable by default.
