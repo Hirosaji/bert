@@ -96,7 +96,7 @@ class convert_to_simlarity:
             cls_feature = list(filter(lambda layer: layer["token"] == "[CLS]", raw_feature["features"]))
             cls_features.append(cls_feature[0])
 
-        simlarities = calc_simlarity(cls_features[1], cls_features[:0] + cls_features[2:])
+        simlarities = calc_simlarity(cls_features[0], cls_features[1:])
 
         return simlarities
 
