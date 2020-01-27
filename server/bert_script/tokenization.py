@@ -123,7 +123,7 @@ def load_vocab(vocab_file):
   """Loads a vocabulary file into a dictionary."""
   vocab = collections.OrderedDict()
   index = 0
-  with tf.gfile.GFile(vocab_file, "r") as reader:
+  with tf.io.gfile.GFile(vocab_file, "r") as reader:
     while True:
       token = convert_to_unicode(reader.readline())
       if not token:
@@ -193,7 +193,7 @@ class FullTokenizer(object):
 class SentencePieceTokenizer(object):
     """Runs SentencePiece tokenization (from raw text to tokens list)"""
 
-    def __init__(self, model_file=None, do_lower_case=True):
+    def __init__(self, model_file, do_lower_case=True):
         """Constructs a SentencePieceTokenizer."""
         self.tokenizer = sp.SentencePieceProcessor()
         if self.tokenizer.Load(model_file):
